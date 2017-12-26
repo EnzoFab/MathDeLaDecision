@@ -1,50 +1,17 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
 
 public class CSVInterpreteur {
-	/*public static Etudiant[] listeEtudiantFromCSV(int nbEtudiant, String path, String motif){
-		Etudiant [] liste_Etudiant = new Etudiant[nbEtudiant];
-		String line = "";
-		BufferedReader br = null;
-		int i = 0;
-		
-		try {
-
-            br = new BufferedReader(new FileReader(path));
-            while ((line = br.readLine()) != null && i <nbEtudiant) {
-
-                // use comma as separator
-                String[] country = line.split(motif);
-
-                System.out.println(country + " " +i);// test
-
-            }
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-		
-		
-		
-		return liste_Etudiant;
-	}*/
-	
 	
 	
 	/**
@@ -91,4 +58,22 @@ public class CSVInterpreteur {
 	       return file;
 	   }
 	
+	 /**
+	  * créé le fichier path et écrit le message à l'interieur 
+	  * @param path
+	  * @param message
+	  */
+	 public static void createCSV(String path, String message){
+		 Writer writer = null;
+
+		 try {
+		     writer = new BufferedWriter(new OutputStreamWriter(
+		           new FileOutputStream(path), "utf-8"));
+		     writer.write(message);
+		 } catch (IOException ex) {
+			 System.out.println("Erreur dans la creation du fichier");
+		 } finally {
+		    try {writer.close();} catch (Exception ex) {/*ignore*/}
+		 }
+	 }
 }

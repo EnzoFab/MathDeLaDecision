@@ -96,18 +96,96 @@ public class BinomePondere implements Comparable{
 		}
 		
 	}
+	
+	/**
+	 * On regarde la l'appreciation que l'etudiant 1 a donné à l'étudiant 2
+	 * on compte pour combien d'élèves l'étudiant 1 à donné la même appreciation
+	 * meme chose du coté de l'étudiant 2 
+	 * la fonction renvoi le nombre minimal entre les deux nombres
+	 * @return
+	 */
+	public int nbEtuAimeMin(){
+		int resultat = 0;
+		Appreciation a = etudiant1.noteDonnee(etudiant2);
+			// note donnée par etudiant1 à etudiant2
+		Appreciation a2 = etudiant2.noteDonnee(etudiant1);
+			// note donnée par etudiant2 à etudiant1
+		int nb1 = etudiant1.nbEtu(a);
+		int nb2 = etudiant1.nbEtu(a2);
+		if(nb1 <= nb2)
+			resultat = nb1;
+		else
+			resultat = nb2;
+		return resultat;
+	}
 
 	@Override
 	public int compareTo(Object arg0) {
 		// TODO Auto-generated method stub
+		int resultat=0;
 		BinomePondere c = (BinomePondere) arg0;
 		Integer i1 = new Integer(this.poids);
 		
 		Integer i2 = new Integer(c.poids);
-		
-		return i1.compareTo(i2); 
+		if(c.poids != this.poids) // si les deux poids sont différents 
+		{
+			resultat =i1.compareTo(i2);
+			
+		}
+		else {
+			if(  !c.appartient(etudiant1) && !c.appartient(etudiant2)){
+				
+				Integer minBp1 = new Integer(this.nbEtuAimeMin());
+				Integer minBp2 = new Integer(c.nbEtuAimeMin());
+				resultat = -minBp1.compareTo(minBp2);
+			}else{
+				if(c.etudiant1.equals(etudiant1)){
+					
+					Appreciation a = etudiant2.noteDonnee(etudiant1);
+					Integer min1 = new Integer(etudiant2.nbEtu(a));
+					
+					Appreciation a2 = c.etudiant2.noteDonnee(c.etudiant1);
+					Integer min2 = new Integer(c.etudiant2.nbEtu(a2));
+					
+					resultat = min1.compareTo(min2);
+					
+				}else if(c.etudiant1.equals(etudiant2)){
+					Appreciation a = etudiant1.noteDonnee(etudiant2);
+					Integer min1 = new Integer(etudiant1.nbEtu(a));
+					
+					Appreciation a2 = c.etudiant2.noteDonnee(c.etudiant1);
+					Integer min2 = new Integer(c.etudiant2.nbEtu(a2));
+					
+					resultat = min1.compareTo(min2);
+					
+				}else if(c.etudiant2.equals(etudiant1)){
+					System.out.println("True3");
+					Appreciation a = etudiant2.noteDonnee(etudiant1);
+					Integer min1 = new Integer(etudiant2.nbEtu(a));
+					
+					Appreciation a2 = c.etudiant1.noteDonnee(c.etudiant2);
+					Integer min2 = new Integer(c.etudiant1.nbEtu(a2));
+					
+					resultat = min1.compareTo(min2);
+					
+				}else if(c.etudiant2.equals(etudiant2)){
+					System.out.println("True4");
+					Appreciation a = etudiant1.noteDonnee(etudiant2);
+					Integer min1 = new Integer(etudiant1.nbEtu(a));
+					
+					Appreciation a2 = c.etudiant1.noteDonnee(c.etudiant2);
+					Integer min2 = new Integer(c.etudiant1.nbEtu(a2));
+					
+					resultat = min1.compareTo(min2);
+				}
+				
+			}
+		}
+			
+		return resultat;
 			// permet d'être trier en fonction du poids 
 	}
+	
 	
 	public boolean equals(Object o){
 		BinomePondere bp = (BinomePondere)o;

@@ -19,28 +19,35 @@ public class Promo {
 	private ArrayList liste_Groupe,
 			liste_couples_intermediaires,
 			liste_Couple_Affecte,
-			liste_Etudiant;
+			liste_Etudiant,
+			liste_trinomeIntermediaires;
+	private boolean passer = false; // pour passer toutes les explication
+	private String nomFichierSortie;
 	
 	
-	public Promo(){
+	public Promo(String csv, String fichier){
 		
 		liste_Groupe = new ArrayList();// les groupes finaux 
 		liste_couples_intermediaires = new ArrayList();
 				// les couples qui ne sont pas encore deja créés mais pas qui peuvent changer 
 		liste_Couple_Affecte = new ArrayList();// les couples fixés 
 		liste_Etudiant =new ArrayList();
+		liste_trinomeIntermediaires= new ArrayList();
 		
 		try {
-			csvResultat = (ArrayList) CSVInterpreteur.readFile("preferences.csv");
+			csvResultat = (ArrayList) CSVInterpreteur.readFile(csv); // "preferences.csv"
 			// recuperation de toute les données du cvs 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Fichier non trouvé ");
 		}
 		
 		initEtudiant();
 		creerAssociationEtu();
-		Collections.shuffle(this.liste_Etudiant); // on trie les etudiants aléatoirement
+		setMentionMajoritaireEtu();
+		
+		
+		nomFichierSortie = fichier;
 		
 		
 	}
@@ -64,6 +71,8 @@ public class Promo {
 			e = new Etudiant(nom, prenom);
 			this.liste_Etudiant.add(e);
 		}
+		
+		
 	}
 	
 	/**
@@ -106,111 +115,152 @@ public class Promo {
 	}
 	
 	
+	/**
+	 * met à jour les mentions majoritaires pour chaque etudiant
+	 */
+	private void setMentionMajoritaireEtu(){
+		Etudiant actuel, observe;
+		ArrayList <Appreciation> listAppreciation = new ArrayList<Appreciation>();
+		for(Object o : this.liste_Etudiant){
+			actuel = (Etudiant) o;
+			listAppreciation.clear();
+			for(Object o2: this.liste_Etudiant){
+				if(!actuel.equals(o2)){
+					observe = (Etudiant)o2;
+					listAppreciation.add(observe.noteDonnee(actuel));
+				}
+			}
+			Collections.sort(listAppreciation);
+			actuel.setMentionMajoritaire(listAppreciation);
+		}
+		Collections.sort(this.liste_Etudiant); 
+			// trie la liste des étudiants en fonction de leurs mention majoritaire
+		
+		
+		for(Object o: liste_Etudiant){
+			Etudiant e = (Etudiant)o;
+			e.triEtudiant(); // tri les etudiants notés par e 
+			System.out.println(e.getPrenom()+" " +e.getNom()+" mention majoritaire : " +
+					e.getMentionMajoritaire().getAppreciation()+ " "+
+					e.getMentionMajoritaire().getNombre());
+		}
+		
+		pause();
+
+	}
+	
+	
+	/**
+	 * creer des trinomes à partir des trinomes restants 
+	 * @param etuRestant
+	 */
+	private void repartitionTrinomeV2(ArrayList etuRestant){
+		
+		Collections.sort(etuRestant);
+		ArrayList listeTrinome = new ArrayList(); 
+		Etudiant actuel; 
+		BinomePondere bObserve; 
+		TrinomeIntermediaire triInt;
+		//ListIterator iterateur = etuRestant.listIterator();
+		
+		for(int i =0; i< etuRestant.size(); i++){
+		//	actuel =(Etudiant) iterateur.next();
+			
+			actuel =(Etudiant)etuRestant.get(i);
+	
+			ArrayList listTrinomePossibles = new ArrayList(); 
+				// liste des trinomes possibles pour l'etudiant 
+			
+			for(Object o: this.liste_couples_intermediaires){
+				bObserve = (BinomePondere) o;
+				listTrinomePossibles.add(new TrinomeIntermediaire(actuel, bObserve));
+					// ajout du trinome 
+			}
+			Collections.sort(listTrinomePossibles);// on trie en fonction du poids des couples
+			System.out.println("\nTrinomes possibles pour " + 
+					actuel.getPrenom() + " (trier en fonction du poids ):\n");
+			for(Object o : listTrinomePossibles)
+				System.out.println(o);
+			
+			System.out.println();
+			
+			for(Object o : listTrinomePossibles){
+				triInt = (TrinomeIntermediaire)o;
+				
+				TrinomeIntermediaire ancienTri; // parcours la liste des 
+				if( (ancienTri = 
+						existeTrinome(liste_trinomeIntermediaires,triInt.getBinome()))  != null){
+					if(triInt.getPoids() < ancienTri.getPoids()){
+						System.out.println(ancienTri.getEtudiant().getPrenom() + " n'a plus de groupe");
+						//iterateur.add(ancienTri.getEtudiant());
+						etuRestant.add(ancienTri.getEtudiant());
+						liste_trinomeIntermediaires.remove(ancienTri);
+						liste_trinomeIntermediaires.add(triInt);
+						System.out.println("Nouveau trinomes "+ triInt.affichageSimple());
+						break;
+					}
+				}else{
+					liste_trinomeIntermediaires.add(triInt);
+					System.out.println("Nouveau trinome "+ triInt.affichageSimple());
+					break;
+				}
+				
+			}
+			
+		}
+		System.out.println("etudiant restant "+ etuRestant.size());
+		for(Object o: liste_trinomeIntermediaires){
+			TrinomeIntermediaire trinome = (TrinomeIntermediaire)o;
+			if(this.liste_couples_intermediaires.contains(trinome.getBinome()) ){
+				liste_couples_intermediaires.remove(trinome.getBinome());
+				liste_couples_intermediaires.add(trinome.getTrinome());
+			}
+		}
+		Collections.sort(this.liste_couples_intermediaires);
+		
+		
+	}
+	
+	
 
 	
 	/**
 	 * crée les groupes d'étudiants en fonction des appréciations de chacun
 	 */
-	/*public void repartitionGroupe(){
-		System.out.println("Debut de la répartion");
-		// premiere amélioration prendre les étudiants aléatoirement
-		ArrayList coupleTemporaire =new ArrayList();
-		
-		Etudiant courant, observe;
-		final int DISTANCE_MAX = 10; // la distance max que peut atteindre un couple 
-			// 5 + 5 (5 car il y a au max 5 entre TB et AR)
-		for(Object o: this.liste_Etudiant){
-		
-			courant = (Etudiant) o;
-			System.out.println(courant.getPrenom()+"...");
-			BinomePondere c = new BinomePondere(courant,null,DISTANCE_MAX); 
-				// creation d'un couple 
-			Appreciation a = courant.getMeilleureNote();// meilleure note donnée
-			AppreciationEtu [] appreciation_donnee = courant.getClassification_appreciation();
-			
-			for(int i= a.ordinal(); i < appreciation_donnee.length; i++){ 
-				// on part de la meilleure note donnée et on parcours la listes des étudiants 
-				AppreciationEtu ae = appreciation_donnee[i];
-				
-				Collections.shuffle(ae.getListEtudiant()); // trie aléatoirement
-				
-				for(Object o2 : ae.getListEtudiant()){
-					
-					
-					observe = (Etudiant)o2; // 
-					int distanceEtuCourant = Appreciation.distance(a, courant.noteDonnee(observe));
-					// recuperation de la distance entre la meilleure note et
-					//la note donnée à l'etudiant
-					int distanceEtuObserve = Appreciation.distance(
-							observe.getMeilleureNote(), 
-							observe.noteDonnee(courant)
-						);
-				
-					
-					boolean dejacouple = false; 
-					BinomePondere c2;
-							// on va regarder si l'étudiant est déjà dans un groupe 
-					Iterator ite = this.liste_couples_intermediaires.iterator();
-					
-					while(!dejacouple && ite.hasNext()){
-						c2 = (BinomePondere) ite.next();
-						if(c2.appartient(observe)){
-							dejacouple = true;
-						}else if(c2.appartient(courant)){
-								dejacouple = true;
-							}
-						}
-					if(distanceEtuCourant +distanceEtuObserve < c.getPoids() ){
-						if(!dejacouple){
-							c.setEtudiant(courant, observe, distanceEtuCourant +distanceEtuObserve);
-							// on mets a jour le couple 
-							//si jamais on trouve une meilleure association
-						}else{
-							// il faut qu'on casse une association
-							// se souvienne de l'etudiant qui a perdu son partenaire
-							//pour le rajouter à un autre groupe 
-							c.setEtudiant(courant, observe, distanceEtuCourant +distanceEtuObserve);
-						}
-					
-					}
-				}
-				
-			}
-			this.liste_couples_intermediaires.add(c); // on ajoute aux couples potentiel
-		}
-		System.out.println("Fin de la répartion");
-	}*/
-	
 	public void repartitionGroupe(){
 		System.out.println("Debut de la répartion");
+		passer = false;
 		
 		ArrayList liste_etudiant_a_coupler = new ArrayList(this.liste_Etudiant);
+		// copie de la liste des etudiants;
+		
 		ArrayList liste_binome = new ArrayList();
-			// copie de la liste des etudiants;
-		Collections.shuffle(liste_etudiant_a_coupler); 
-			// on trie aléatoirement la liste des étudiants 
+			
+		/*Collections.shuffle(liste_etudiant_a_coupler); 
+			// on trie aléatoirement la liste des étudiants */
 		Etudiant actuel, observe;
 		ListIterator iterateur = liste_etudiant_a_coupler.listIterator();
 		
-		final int DISTANCE_MAX = 10; // la distance max que peut atteindre un couple 
-		// 5 + 5 (5 car il y a au max 5 entre TB et AR)
 		
+		int iterationBoucle = 0;
 		
 		// repartition des binomes 
-		while(iterateur.hasNext() && liste_couples_intermediaires.size() < 18){
-			actuel = (Etudiant) iterateur.next(); // etudiant suivant
+		while(iterationBoucle < liste_etudiant_a_coupler.size()
+				&& iterationBoucle<liste_Etudiant.size() ||
+				liste_couples_intermediaires.size() < 18 ){
+			//actuel = (Etudiant) iterateur.next(); // etudiant suivant
+			actuel = (Etudiant) liste_etudiant_a_coupler.get(iterationBoucle);
+			iterationBoucle++;
 			System.out.println(actuel.getPrenom()+" "
 					+ actuel.getNom() 
 					+ "...\n");
-			//System.out.println(actuel.getPrenom()+"...");
+			
 			
 			ArrayList liste_binomePossible = new ArrayList();
 			
-			Appreciation a = actuel.getMeilleureNote();// meilleure note donnée
-			AppreciationEtu [] appreciation_donnee = actuel.getClassification_appreciation();
-			
-			// creation de tout les couples les binomes possible pour l'etudiant actuel
+			// creation de tous les couples les binomes possibles pour l'etudiant actuel
 			for(AppreciationEtu ae : actuel.getClassification_appreciation()){
+				// amelioration: trier les etudiants selon leurs profils 
 				for(Object o : ae.getListEtudiant()){
 					observe = (Etudiant) o;
 					
@@ -222,7 +272,7 @@ public class Promo {
 				}
 			}
 			
-			Collections.sort(liste_binomePossible);// on trie en fonction du poids des couples
+			Collections.sort(liste_binomePossible);// on trie en fonction du poids des binomes
 			System.out.println("\nBinome possible pour " + 
 					actuel.getPrenom() + " (trier en fonction du poids ):\n");
 			for(Object o : liste_binomePossible)
@@ -230,48 +280,111 @@ public class Promo {
 			
 			System.out.println();
 			
-			/*for(Object o: liste_binomePossible)
-				System.out.println(o);
-				*/
-			// on parcours la liste des binomePossible pour l'etudiant
+	
+			// on parcours la liste des binomes possibles pour l'etudiant
 			for(Object o: liste_binomePossible){
 				BinomePondere c = (BinomePondere) o;
-				BinomePondere ancienCouple;
-				if(( ancienCouple = dejaPresent(c.getEtudiant1()) ) != null){
-					// l'étudiant actuel est déjà présent dans un couple 
-					
+				BinomePondere ancienCouple, ancienCouple2;
+				
+				if( (ancienCouple = dejaPresent(c.getEtudiant1()) )  !=null &&
+						(ancienCouple2 = dejaPresent(c.getEtudiant2()) ) !=null  ){
+					/*cas n°1 
+					 * les deux etudiants sont deja dans un groupe 
+					 * Premier cas les deux étudiants formant le nouveau couple
+					 * sont deja dans un couple,
+					 * on regarde alors le poids de ce nouveau couple comparé 
+					 * aux poids des deux anciens couple 
+					 * si jamais le poids est inférieur on casse les deux anciens couples et 
+					 * on y ajoute le nouveau, les deux élèves 
+					 * n'ayant plus de groupes sont remis dans la liste des elèves à grouper 
+					 */
+					if(c.getPoids() < ancienCouple.getPoids() &&
+							c.getPoids() < ancienCouple2.getPoids() 
+							||
+							c.getPoids() <= ancienCouple.getPoids() &&
+							c.getPoids() < ancienCouple2.getPoids() 
+							||
+							c.getPoids() < ancienCouple.getPoids() &&
+							c.getPoids() <= ancienCouple2.getPoids() 
+							||
+							(c.getPoids() == ancienCouple.getPoids() 
+								&& c.getPoids() == ancienCouple2.getPoids() 
+								&& c.nbEtuAimeMin() <=ancienCouple.nbEtuAimeMin()
+								&& c.nbEtuAimeMin() <= ancienCouple2.nbEtuAimeMin())
+							){
+						/*
+						 * le poids du nouveau couple est inferieur 
+						 * aux poids des deux anciens couples
+						 * ou 
+						 * Le poids du nouveau couples est inférieur au poids d'un couple 
+						 * et inferieur ou egal au poids du deuxieme 
+						 * ou
+						 * les 3 poids poids sont égaux 
+						 * on va donc créer le couple avec les etudiants 
+						 * qui aiment le moinds de monde 
+						 * càd le binome avec le nbEtuAimeMin le plus bas sera créé
+						 */
+						if(c.getEtudiant1().equals(ancienCouple.getEtudiant1())){
+							liste_etudiant_a_coupler.add(ancienCouple.getEtudiant2());
+							// on le réajoute à la liste des étudiants à coupler 
+							System.out.println(ancienCouple.getEtudiant2().getPrenom()
+								+" n'a plus de groupe ");
+						}else if(c.getEtudiant1().equals(ancienCouple.getEtudiant2())){
+							liste_etudiant_a_coupler.add(ancienCouple.getEtudiant1());
+							// on le réajoute à la liste des étudiants à coupler 
+							System.out.println(ancienCouple.getEtudiant1().getPrenom()
+								+" n'a plus de groupe ");
+						}
+						liste_couples_intermediaires.remove(ancienCouple);
+						
+						if(c.getEtudiant2().equals(ancienCouple2.getEtudiant1())){
+							liste_etudiant_a_coupler.add(ancienCouple2.getEtudiant2());
+							// on le réajoute à la liste des étudiants à coupler 
+							System.out.println(ancienCouple2.getEtudiant2().getPrenom()
+								+" n'a plus de groupe ");
+						}else if(c.getEtudiant2().equals(ancienCouple2.getEtudiant2())){
+							liste_etudiant_a_coupler.add(ancienCouple2.getEtudiant1());
+							// on le réajoute à la liste des étudiants à coupler 
+							System.out.println(ancienCouple2.getEtudiant1().getPrenom()
+								+" n'a plus de groupe ");
+						}
+						liste_couples_intermediaires.remove(ancienCouple2);
+						//ancienCouple.maj(c); // on  met a jour l'ancien couple 
+						System.out.println(c.getEtudiant1().getPrenom() + 
+								" est maintenant en binome avec "+
+								c.getEtudiant2().getPrenom()+"\n");
+						liste_couples_intermediaires.add(c);
+						
+					}
+				}
+				
+				/*Cas n°2  
+				 * L'étudiant actuel (c.getEtudiant1() c'est la meme chose )
+				 *  est déja dans un binome, on regarde alors le poids d'un nouveau couple 
+				 *  si jamais le poids de c est inférieur on casse l'ancien couple 
+				 *  l'ancien partenaire de l'étudiant actuel est remis dans la liste des étudiants
+				 *  à coupler et on ajoute le couple c
+				 */
+				else if(( ancienCouple = dejaPresent(c.getEtudiant1()) ) != null){
 					if(c.getPoids() < ancienCouple.getPoids()){
-						// le nouveau couple est meilleur 
-						if(c.getEtudiant2().equals(ancienCouple.getEtudiant1())){
+						if(c.getEtudiant1().equals(ancienCouple.getEtudiant1())){
 							// l'etudiant qui se retrouve tout seul est le deuxieme 
 							
-							iterateur.add(ancienCouple.getEtudiant1());
+							liste_etudiant_a_coupler.add(ancienCouple.getEtudiant2());
 								// on le réajoute à la liste des étudiants à coupler 
-							System.out.println(ancienCouple.getEtudiant1().getPrenom()
-									+" n'a plus de groupe ");
-							
-							
-							
-							
-						}else if (c.getEtudiant2().equals(ancienCouple.getEtudiant2())){
-							iterateur.add(ancienCouple.getEtudiant2());
-							// on le réajoute à la liste des étudiants à coupler 
 							System.out.println(ancienCouple.getEtudiant2().getPrenom()
 									+" n'a plus de groupe ");
+							
+							
 							
 						}else if (c.getEtudiant1().equals(ancienCouple.getEtudiant2())){
-							iterateur.add(ancienCouple.getEtudiant2());
+							liste_etudiant_a_coupler.add(ancienCouple.getEtudiant1());
 							// on le réajoute à la liste des étudiants à coupler 
 							System.out.println(ancienCouple.getEtudiant1().getPrenom()
-									+" n'a plus de groupe ");
-							
-						}else if (c.getEtudiant2().equals(ancienCouple.getEtudiant1())){
-							iterateur.add(ancienCouple.getEtudiant2());
-							// on le réajoute à la liste des étudiants à coupler 
-							System.out.println(ancienCouple.getEtudiant2().getPrenom()
 									+" n'a plus de groupe ");
 							
 						}
+						
 						
 						
 						
@@ -282,17 +395,17 @@ public class Promo {
 								c.getEtudiant2().getPrenom()+"\n");
 						liste_couples_intermediaires.add(c);
 						
-					}else{
-						// le poids est egal  il faut regarder si le couple est le meme 
-						// sinon on regarde l'histoire de profil 
 					}
-					
+		
 				}else if((ancienCouple =  dejaPresent(c.getEtudiant2()) ) != null){
-					if(c.getPoids() < ancienCouple.getPoids()){
+					if(c.getPoids() < ancienCouple.getPoids()
+							||
+							(c.getPoids() == ancienCouple.getPoids() 
+								&&  c.nbEtuAimeMin() < ancienCouple.nbEtuAimeMin() ) ){
 						if(c.getEtudiant2().equals(ancienCouple.getEtudiant1())){
 							// l'etudiant qui se retrouve tout seul est le deuxieme 
 							
-							iterateur.add(ancienCouple.getEtudiant2());
+							liste_etudiant_a_coupler.add(ancienCouple.getEtudiant2());
 								// on le réajoute à la liste des étudiants à coupler 
 							System.out.println(ancienCouple.getEtudiant2().getPrenom()
 									+" n'a plus de groupe ");
@@ -300,24 +413,13 @@ public class Promo {
 							
 							
 						}else if (c.getEtudiant2().equals(ancienCouple.getEtudiant2())){
-							iterateur.add(ancienCouple.getEtudiant1());
+							liste_etudiant_a_coupler.add(ancienCouple.getEtudiant1());
 							// on le réajoute à la liste des étudiants à coupler 
 							System.out.println(ancienCouple.getEtudiant1().getPrenom()
-									+" n'a plus de groupe ");
-							
-						}else if (c.getEtudiant1().equals(ancienCouple.getEtudiant2())){
-							iterateur.add(ancienCouple.getEtudiant1());
-							// on le réajoute à la liste des étudiants à coupler 
-							System.out.println(ancienCouple.getEtudiant1().getPrenom()
-									+" n'a plus de groupe ");
-							
-						}else if (c.getEtudiant1().equals(ancienCouple.getEtudiant1())){
-							iterateur.add(ancienCouple.getEtudiant2());
-							// on le réajoute à la liste des étudiants à coupler 
-							System.out.println(ancienCouple.getEtudiant2().getPrenom()
 									+" n'a plus de groupe ");
 							
 						}
+						
 						
 						
 						
@@ -335,10 +437,15 @@ public class Promo {
 					
 					
 				}else{
-					System.out.println(c.getEtudiant1().getPrenom() + 
-							" est maintenant en binome avec "+
-							c.getEtudiant2().getPrenom()+"\n");
-					liste_couples_intermediaires.add(c);
+					if(liste_couples_intermediaires.size() < 18 ){
+						System.out.println(c.getEtudiant1().getPrenom() + 
+								" est maintenant en binome avec "+
+								c.getEtudiant2().getPrenom()+"\n");
+						liste_couples_intermediaires.add(c);
+					}else{
+						liste_etudiant_a_coupler.add(actuel);
+					}
+					
 					break;
 					
 				}
@@ -346,22 +453,71 @@ public class Promo {
 			pause();
 		} // fin du while 
 		
-		System.out.println("\nEtutudiant restants à répartir "+etudiantRestant().size());
+		System.out.println("\nEtudiant restants à répartir "+etudiantRestant().size());
 		
 		for(Object o : etudiantRestant()){
 			Etudiant e = (Etudiant)o;
 			System.out.println(e.getPrenom() + " "+ e.getNom());
 		}
-		System.out.println("\nFin des repartions des binomes \n ");
+		System.out.println( iterationBoucle +"\nFin des repartions des binomes \n ");
+		passer = false;// on force la pause 
 		// repartie les eleves restants dans les groupes déjà crées 
 		pause();
-		repartitionTrinome(etudiantRestant());
-		
+		//repartitionTrinome(etudiantRestant());
+		this.repartitionTrinomeV2(etudiantRestant());
 		System.out.println("\nFin de répartition\n");
 		
+		CSVInterpreteur.createCSV(nomFichierSortie, transformationCSV());
 		
 	}
 
+	/**
+	 * Transforme les groupes créés en une chaine de caracteres représentant un CSV
+	 * @return
+	 */
+	private String transformationCSV(){
+		String csv ="nom";
+		Etudiant actuel, observe; 
+		ListIterator iterateur = this.liste_Etudiant.listIterator();
+		while(iterateur.hasNext()){
+			csv+=",";
+			actuel = (Etudiant)iterateur.next();
+			csv+=actuel.getPrenom()+ " "+actuel.getNom();
+		} /* ajout de la premiere ligne de la forme : 
+		actuel.prenom actuel.nom, etudSuiv.prenom, etudSuiv.nom, ... 
+		*/
+		csv+="\n";
+		iterateur = this.liste_Etudiant.listIterator();
+		BinomePondere bp = null;
+		boolean appartient;
+		int i;
+		while(iterateur.hasNext()){
+			actuel = (Etudiant)iterateur.next();
+			csv+=actuel.getPrenom()+ " "+actuel.getNom();
+			appartient = false;
+			i = 0;
+			while(!appartient && i< liste_couples_intermediaires.size()){
+				bp = (BinomePondere)this.liste_couples_intermediaires.get(i);
+				appartient = bp.appartient(actuel);
+				i++;
+			}
+			for(Object o: liste_Etudiant){
+				observe = (Etudiant)o;
+				if(observe.equals(actuel))
+					csv+=",-1";
+				else if(bp.appartient(observe))
+					csv+=",1";
+				else
+					csv+=",0";
+					
+				
+				
+			}
+			
+			csv+="\n";
+		}
+		return csv;
+	}
 	
 	
 	/**
@@ -470,7 +626,12 @@ public class Promo {
 		
 	}
 	
-	
+	/**
+	 * regarde si un binome est présent dans un trinome 
+	 * @param l: liste de trinome 
+	 * @param bp
+	 * @return
+	 */
 	private boolean estPresent(ArrayList l, BinomePondere bp){
 		boolean estPresent = false;
 		int i = 0;
@@ -486,6 +647,12 @@ public class Promo {
 		return estPresent; 
 	}
 	
+	/**
+	 * Vrai si un etudiant est présent dans un trinome 
+	 * @param l
+	 * @param e
+	 * @return
+	 */
 	private boolean estPresent(ArrayList l, Etudiant e){
 		boolean estPresent = false;
 		int i = 0;
@@ -499,6 +666,28 @@ public class Promo {
 		}
 		
 		return estPresent; 
+	}
+
+	
+	/**
+	 * Vrai si un etudiant est présent dans un trinome 
+	 * si oui renvoie ce trinome 
+	 * @param l
+	 * @param e
+	 * @return
+	 */
+	private TrinomeIntermediaire existeTrinome(ArrayList l, BinomePondere bp){
+		TrinomeIntermediaire trInt = null;
+		int i = 0;
+		while(trInt == null && i < l.size()){
+			TrinomeIntermediaire tr = (TrinomeIntermediaire) l.get(i);
+			if(tr.getBinome().equals(bp)){
+				trInt = tr;
+			}
+			i++;
+		}
+		
+		return trInt; 
 	}
 	
 	
@@ -522,6 +711,7 @@ public class Promo {
 			if(!appartient)
 				retour.add(e);
 		}
+		Collections.sort(retour);
 		return retour;
 	}
 	
@@ -550,29 +740,24 @@ public class Promo {
 	private void pause(){
 		Scanner sc = new Scanner(System.in);
 		String str ="";
-		
-		
-		
-			System.out.println("Continuer ?\nOui/Non (Liste Binome)");
-			str = sc.nextLine();
-			
-			if(str.equals("Liste")){
-				System.out.println("Etudiants deja affectés");
-				for(Object o: this.liste_couples_intermediaires){
-					System.out.println(o);
+		if(!passer){
+			do{
+				System.out.println("Continuer ?\nOui/Non Liste (afficher liste des binomes)/ " +
+						"passer (ne plus s'arreter)");
+				str = sc.nextLine();
+				if(str.equals("Liste")){
+					System.out.println("Etudiants deja affectés : "+
+							liste_couples_intermediaires.size());
+					for(Object o: this.liste_couples_intermediaires){
+						System.out.println(o);
+					}
+				}else if(str.equals("passer")){
+					passer = true;
 				}
-			}
-		while(!str.equals("Oui") && !str.equals("oui") && !str.equals("o") 
-					&& !str.equals("O")){
-			System.out.println("Continuer ?\nOui/Non (Liste Binome)");
-			str = sc.nextLine();
-			if(str.equals("Liste")){
-				System.out.println("Etudiants deja affectés");
-				for(Object o: this.liste_couples_intermediaires){
-					System.out.println(o);
-				}
-			}
+			}while(!str.equals("Oui") && !str.equals("oui") && !str.equals("o") 
+					&& !str.equals("O") && !str.equals("passer"));
 		}
+		
 		 
 		
 	}
@@ -586,12 +771,35 @@ public class Promo {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		//CSVInterpreteur.listeEtudiantFromCSV(20, "preferences.csv", ",");
-		Promo p = new Promo();
+		String csv= "";
+		String sortie="";
+		try
+	    {
+	      csv = args[0];
+	      
+	    }
+	    catch(ArrayIndexOutOfBoundsException e){
+	    	csv = "preferences.csv";
+	    }
+		try
+	    {
+			sortie = args[1];
+	      
+	    }
+	    catch(ArrayIndexOutOfBoundsException e){
+	    	sortie = "resultatRepartition.csv";
+	    }
+		
+		Promo p = new Promo(csv,sortie);
 		p.repartitionGroupe();
-		//System.out.print(p.liste_Etudiant.get(34));
+		/*System.out.println(p.liste_Etudiant.get(13));
+		System.out.println(p.liste_Etudiant.get(19));
+		System.out.println(p.liste_Etudiant.get(22));
+		System.out.println(p.liste_Etudiant.get(26));*/
 		for(Object o : p.liste_couples_intermediaires){
 			System.out.println(o);
 		}
+		
 
 	}
 

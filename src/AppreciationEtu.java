@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * 
@@ -50,6 +51,18 @@ public class AppreciationEtu {
 		return this.listEtudiant; 
 		// penser à faire une copie de cette liste 
 		//pour ne pas supprimer les données qu'elle contient
+	}
+	
+	/**
+	 * trie chaque étudiant selon le critère de tri de la classe Etudiant
+	 * @see Etudiant
+	 */
+	public void triEtudiant(){
+		Collections.sort(this.listEtudiant);
+	}
+	
+	public int size(){
+		return this.listEtudiant.size();
 	}
 	
 	public String toString(){

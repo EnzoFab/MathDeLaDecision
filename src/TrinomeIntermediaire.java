@@ -3,7 +3,7 @@
  * @author enzo
  *
  */
-public class TrinomeIntermediaire {
+public class TrinomeIntermediaire implements Comparable{
 	private Etudiant e;
 	private BinomePondere bp;
 	private int poids ;
@@ -46,9 +46,41 @@ public class TrinomeIntermediaire {
 	}
 	
 	
+
+	
+	
+	/**
+	 * récupere un trinome pondéré à partir du trinome intermédiaire
+	 * 
+	 * @return
+	 */
 	public TrinomePondere getTrinome(){
 		return new TrinomePondere(this.e, this.bp.getEtudiant1(),
 				this.bp.getEtudiant2(), poids);
+	}
+	
+	public boolean appartient(Etudiant e){
+		return e.equals(this.e) || bp.appartient(e);
+	}
+
+
+	@Override
+	public int compareTo(Object arg0) {
+		// TODO Auto-generated method stub
+		TrinomeIntermediaire tr = (TrinomeIntermediaire) arg0;
+		Integer i1 = new Integer(this.poids);
+		
+		Integer i2 = new Integer(tr.poids);
+		
+		return i1.compareTo(i2); 
+			// permet d'être trier en fonction du poids 
+	}
+	
+	
+	public String affichageSimple(){
+		return e.getPrenom() + " " +e.getNom()+ " avec "+ bp.getEtudiant1().getPrenom()+
+				" "+ bp.getEtudiant1().getNom()+ " et "+bp.getEtudiant2().getPrenom() +
+				bp.getEtudiant2().getNom();
 	}
 	
 	

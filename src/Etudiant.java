@@ -1,9 +1,24 @@
+import java.util.ArrayList;
 
-public class Etudiant {
+
+public class Etudiant implements Comparable{
 	
-	private static int nb=0; // nombre d'étudiant créés
-	private final int id;
+	/**
+	 *  nombre d'étudiant créés
+	 */
+	private static int nb=0; 
+	
+	/**
+	 * id de l'étudiant 
+	 */
+	private final int id; 
 	private final String nom, prenom;
+	
+	/**
+	 * Mention Majoritaire de l'étudiant
+	 * c'est à dire la médiane de toutes les notes qu'il lui ont été données 
+	 */
+	private MentionMajoritaire mentionMajoritaire; 
 	
 	/**
 	 * tableau des appreciation de l'etudiant a donné aux autres eleve 
@@ -19,11 +34,19 @@ public class Etudiant {
 			new AppreciationEtu(Appreciation.A_REJETER)
 		};
 	
+	/**
+	 * Construits un étudiants 
+	 * son id corresponds aux nombre d'étudiants déjà créés 
+	 * lorsque celui a été créé
+	 * @param n : nom
+	 * @param p : prenom
+	 */
 	public Etudiant(String n, String p){
 		this.nom = n;
 		this.prenom = p;
 		nb++;
 		this.id = nb;
+		this.mentionMajoritaire  = new MentionMajoritaire((Appreciation.TRES_BIEN), 0);
 	
 	}
 	
@@ -55,21 +78,50 @@ public class Etudiant {
 				break;
 		}
 		classification_appreciation[i].add(e);
-		/*Appreciation appr = classification_appreciation[i].getEnTete();
-		while(i< classification_appreciation.length && appr != a ){
-			appr = classification_appreciation[i].getEnTete();
-			System.out.print(i +" ");
-			if(classification_appreciation[i].getEnTete() == (a)){
-				classification_appreciation[i].add(e);
-			}else{
-				i++;
-			}
-			
+	}
+	
+	/**
+	 * Donne le nombre d'étudiants ayant l'appreication a 
+	 * dans la liste des étudiants noté par l'étudiant actuel
+	 * @param a
+	 * @return
+	 */
+	public int nbEtu(Appreciation a){
+		int i=0;
+		switch(a){
+			case TRES_BIEN:
+				i=0;
+				break;
+			case BIEN:
+				i=1;
+				break;
+			case ASSEZ_BIEN:
+				i=2;
+				break;
+			case PASSABLE:
+				i=3;
+				break;
+			case INSUFFISANT:
+				i=4;
+				break;
+			case A_REJETER:
+				i=5;
+				break;
 		}
-		System.out.print("\n");*/
 		
+		return classification_appreciation[i].size();
+	}
+	
+	/**
+	 * tri chaque étudiant de la liste des etudiants notés par l'étudiant 
+	 * en fonction de leur mention majoritaire
+	 */
+	public void triEtudiant(){
+		for(AppreciationEtu ae : this.classification_appreciation)
+			ae.triEtudiant();
 		
 	}
+	
 	
 	/**
 	 * retourne la meilleure appréciation que l'étudiant ait donnée
@@ -149,6 +201,47 @@ public class Etudiant {
 		p += Appreciation.distance(getMeilleureNote(), a);
 		p+= Appreciation.distance(e.getMeilleureNote(), e.noteDonnee(this));
 		return p;
+	}
+	
+	
+	public MentionMajoritaire getMentionMajoritaire(){
+		return this.mentionMajoritaire;
+	}
+	
+	
+	/**
+	 * Recalcule (ou calcule pour la première fois) la mention majoritaire de l'étudiant)
+	 * liste d'appreciation triée par ordre décroissant
+	 * @param listeAppreciation : 
+	 * @return
+	 */
+	public void setMentionMajoritaire( ArrayList <Appreciation> listeAppreciation){ 
+		/*ATTENTION : méthode à appeler au moins une fois
+		 *  pour mettre les bonnes valeurs dans l'attribut mention majoritaire 
+		 */
+		int n = (int) Math.ceil((double)listeAppreciation.size()/2.00); //pour avoir l'entier supérieur (pour le calcul de la médiane)  
+		Appreciation majoritaire = Appreciation.TRES_BIEN ; 
+		majoritaire = listeAppreciation.get(n);
+		int nombreMention = 0;
+		for(int k=0; k<listeAppreciation.size(); k++){
+			
+			if(k<n){ //du côté TB
+				nombreMention = nombreMention+ Appreciation.distance(listeAppreciation.get(k),majoritaire);
+			}
+			else {
+				nombreMention = nombreMention - Appreciation.distance(listeAppreciation.get(k),majoritaire);
+			}
+		}
+		mentionMajoritaire.setMention(majoritaire);
+		mentionMajoritaire.setN(nombreMention);
+	
+	}
+
+	@Override
+	public int compareTo(Object o) {
+		// TODO Auto-generated method stub
+		Etudiant e = (Etudiant)o;
+		return mentionMajoritaire.compareTo(e.mentionMajoritaire);
 	}
 	
 	

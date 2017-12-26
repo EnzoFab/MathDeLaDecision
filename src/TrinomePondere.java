@@ -4,7 +4,7 @@
  *
  */
 public class TrinomePondere extends BinomePondere {
-	private Etudiant etudiant3;
+	private final Etudiant etudiant3;
 	
 	public TrinomePondere(Etudiant e1, Etudiant e2, Etudiant e3, int poids) {
 		super(e1, e2, poids);
