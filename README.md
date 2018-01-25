@@ -1,9 +1,8 @@
 # MathDeLaDecision
-Projet mathématiques de la décision premier semestre de 4ème année
-Ehamelo-Rul-Fabre
+Projet mathématiques de la décision premier semestre de 4ème année réalisé par : Ehamelo, Rul, Fabre.
 
-Le but consiste à trouver un programme permettant de répartir des étudiants 
-dans différents groupes de projets en fonction des appréciations qu'ils se donnent et de celles qu'ils donnent aux projets.
+Le but : trouver une méthode permettant la répartition des étudiants 
+dans différents groupes de projets en fonction des appréciations qu'ils se donnent entre eux et de celles qu'ils donnent aux projets.
 
 
 Notre méthode, pour l’instant, ne concerne que la formation des groupes. Nous avons un nombre déjà défini de binômes et de trinômes à composer. Nous effectuons d’abord des binômes et à la fin les trinômes. 
